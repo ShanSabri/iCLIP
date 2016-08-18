@@ -88,29 +88,30 @@ def cutadapt(f, args):
 
 ###########---------------------------------------###########
 
-# def next_block(fastq_file):
-#     l1 = fastq_file.readline()
-#     l2 = fastq_file.readline()
-#     l3 = fastq_file.readline()
-#     l4 = fastq_file.readline()
-#     return (l1,l2,l3,l4)
-#
+def next_block(fastq_file):
+    l1 = fastq_file.readline()
+    l2 = fastq_file.readline()
+    l3 = fastq_file.readline()
+    l4 = fastq_file.readline()
+    return (l1,l2,l3,l4)
+
+def valid_block(b):
+    return b[0] != ''
+
 # def has_been_seen(block, seen_sequences):
 #     return block[1] in seen_sequences
-#
+
 # def output_block(b, umi_length, out):
 #     updated_block = [b[0].split(' ')[0] + ' length:' + str(len(b[1][umi_length:])-1) + '\n',
 #                      b[1][umi_length:],
 #                      b[2],
 #                      b[3][umi_length:]]
 #     out.write(''.join(updated_block))
-#
+
 # def add_sequence(block,seen_sequences):
 #     seen_sequences.add(block[1])
-#
-# def valid_block(b):
-#     return b[0] != ''
-#
+
+
 # def uniq_fq(f, args):
 #     print '{}\tRemoving duplicate reads from {}'.format(datetime.datetime.now() - start, f)
 #     fastq_file = gzip.open(f)
@@ -135,15 +136,6 @@ def cutadapt(f, args):
 #
 #     return output
 
-def next_block(fastq_file):
-    l1 = fastq_file.readline()
-    l2 = fastq_file.readline()
-    l3 = fastq_file.readline()
-    l4 = fastq_file.readline()
-    return (l1,l2,l3,l4)
-
-def valid_block(b):
-    return b[0] != ''
 
 def uniq_fq(f, args):
     print '{}\tRemoving duplicate reads from {}'.format(datetime.datetime.now() - start, f)
@@ -164,7 +156,7 @@ def uniq_fq(f, args):
     with gzip.open(output, 'wb') as out:
         for n, (k, v) in enumerate(sequences.most_common(), start=1):
             if len(k[args.umi_length:]) - 1 >= args.min_length:
-                out.write('>Sequence_{}_with_{}_occurrences\n{}'.format(str(n), str(v), k))
+                out.write('>Sequence_{}_with_{}_occurrences\n{}'.format(str(n), str(v), k[args.umi_length:]))
             else:
                 too_short_after_umi_cut += 1
 
@@ -176,9 +168,6 @@ def uniq_fq(f, args):
                                                                                                        too_short_after_umi_cut,
                                                                                                        args.min_length)
     return output
-
-
-
 
 ###########---------------------------------------###########
 
