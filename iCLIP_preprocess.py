@@ -190,7 +190,7 @@ def process(args):
         clipped_fq = cutadapt(f, args)
         if args.fastqc: run_fastqc(clipped_fq)
         uniqued_fq = uniq_fq(clipped_fq, args)
-        if args.fastqc: run_fastqc(uniqued_fq)
+        # if args.fastqc: run_fastqc(uniqued_fq) # cannot run fastqc on fasta file
 
     return True
 
