@@ -5,6 +5,7 @@ __email__   = 'ShanASabri@gmail.com'
 __date__    = '2016/08/15'
 
 import datetime, argparse, os, sys, gzip
+from collections import Counter
 
 start = datetime.datetime.now()
 
@@ -87,6 +88,53 @@ def cutadapt(f, args):
 
 ###########---------------------------------------###########
 
+# def next_block(fastq_file):
+#     l1 = fastq_file.readline()
+#     l2 = fastq_file.readline()
+#     l3 = fastq_file.readline()
+#     l4 = fastq_file.readline()
+#     return (l1,l2,l3,l4)
+#
+# def has_been_seen(block, seen_sequences):
+#     return block[1] in seen_sequences
+#
+# def output_block(b, umi_length, out):
+#     updated_block = [b[0].split(' ')[0] + ' length:' + str(len(b[1][umi_length:])-1) + '\n',
+#                      b[1][umi_length:],
+#                      b[2],
+#                      b[3][umi_length:]]
+#     out.write(''.join(updated_block))
+#
+# def add_sequence(block,seen_sequences):
+#     seen_sequences.add(block[1])
+#
+# def valid_block(b):
+#     return b[0] != ''
+#
+# def uniq_fq(f, args):
+#     print '{}\tRemoving duplicate reads from {}'.format(datetime.datetime.now() - start, f)
+#     fastq_file = gzip.open(f)
+#     output = f[:-6] + '.uniq.fq.gz'
+#     seen_sequences = set()
+#     total_seqs, uniq_seqs = 0, 0
+#
+#     block = next_block(fastq_file)
+#     with gzip.open(output, 'wb') as out:
+#         while valid_block(block):
+#             total_seqs += 1
+#             if not has_been_seen(block, seen_sequences):
+#                 if len(block[1][args.umi_length:])-1 >= args.min_length:
+#                     uniq_seqs += 1
+#                     output_block(block, args.umi_length, out)
+#                     add_sequence(block, seen_sequences)
+#             block = next_block(fastq_file)
+#
+#     fastq_file.close()
+#
+#     print '{}\tFound {} unique sequences in {} (total={})'.format(datetime.datetime.now() - start, uniq_seqs, f, total_seqs)
+#
+#     return output
+
 def next_block(fastq_file):
     l1 = fastq_file.readline()
     l2 = fastq_file.readline()
@@ -94,45 +142,43 @@ def next_block(fastq_file):
     l4 = fastq_file.readline()
     return (l1,l2,l3,l4)
 
-def has_been_seen(block, seen_sequences):
-    return block[1] in seen_sequences
-
-def output_block(b, umi_length, out):
-    updated_block = [b[0].split(' ')[0] + ' length:' + str(len(b[1][umi_length:])-1) + '\n',
-                     b[1][umi_length:],
-                     b[2],
-                     b[3][umi_length:]]
-    out.write(''.join(updated_block))
-
-def add_sequence(block,seen_sequences):
-    seen_sequences.add(block[1])
-
 def valid_block(b):
     return b[0] != ''
 
 def uniq_fq(f, args):
     print '{}\tRemoving duplicate reads from {}'.format(datetime.datetime.now() - start, f)
+
     fastq_file = gzip.open(f)
-    output = f[:-6] + '.uniq.fq.gz'
-    seen_sequences = set()
-    total_seqs, uniq_seqs = 0, 0
-
+    sequences = Counter()
     block = next_block(fastq_file)
-    with gzip.open(output, 'wb') as out:
-        while valid_block(block):
-            total_seqs += 1
-            if not has_been_seen(block, seen_sequences):
-                if len(block[1][args.umi_length:])-1 >= args.min_length:
-                    uniq_seqs += 1
-                    output_block(block, args.umi_length, out)
-                    add_sequence(block, seen_sequences)
-            block = next_block(fastq_file)
-
+    while valid_block(block):
+        if block[1] in sequences:
+            sequences[block[1]] += 1
+        else:
+            sequences[block[1]] = 1
+        block = next_block(fastq_file)
     fastq_file.close()
 
-    print '{}\tFound {} unique sequences in {} (total={})'.format(datetime.datetime.now() - start, uniq_seqs, f, total_seqs)
+    output = f[:-6] + '.uniq.fasta.gz'
+    too_short_after_umi_cut = 0
+    with gzip.open(output, 'wb') as out:
+        for n, (k, v) in enumerate(sequences.most_common(), start=1):
+            if len(k[args.umi_length:]) - 1 >= args.min_length:
+                out.write('>Sequence_{}_with_{}_occurrences\n{}'.format(str(n), str(v), k))
+            else:
+                too_short_after_umi_cut += 1
 
+    print '{}\tFound {} unique sequences in {} (total={})'.format(datetime.datetime.now() - start,
+                                                                  len(sequences.keys()), f, sum(sequences.values()))
+    print '{}\tFound the most common unique sequence to be {}'.format(datetime.datetime.now() - start,
+                                                                                          str(sequences.most_common(1)))
+    print '{}\t{} sequences failed to write because the length without the UMI is less than {}'.format(datetime.datetime.now() - start,
+                                                                                                       too_short_after_umi_cut,
+                                                                                                       args.min_length)
     return output
+
+
+
 
 ###########---------------------------------------###########
 
