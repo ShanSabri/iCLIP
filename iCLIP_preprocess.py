@@ -144,10 +144,12 @@ def uniq_fq(f, args):
     sequences = Counter()
     block = next_block(fastq_file)
     while valid_block(block):
-        if block[1] in sequences:
-            sequences[block[1]] += 1
+        seq = block[1]
+        seq_wo_umi = seq[args.umi_length:]
+        if seq_wo_umi in sequences:
+            sequences[seq_wo_umi] += 1
         else:
-            sequences[block[1]] = 1
+            sequences[seq_wo_umi] = 1
         block = next_block(fastq_file)
     fastq_file.close()
 
@@ -155,15 +157,17 @@ def uniq_fq(f, args):
     too_short_after_umi_cut = 0
     with gzip.open(output, 'wb') as out:
         for n, (k, v) in enumerate(sequences.most_common(), start=1):
-            if len(k[args.umi_length:]) - 1 >= args.min_length:
-                out.write('>Sequence_{}_with_{}_occurrences\n{}'.format(str(n), str(v), k[args.umi_length:]))
+            if len(k) - 1 >= args.min_length:
+                out.write('>Sequence_{}_with_{}_occurrences\n{}'.format(str(n), str(v), k))
             else:
                 too_short_after_umi_cut += 1
+                continue
 
     print '{}\tFound {} unique sequences in {} (total={})'.format(datetime.datetime.now() - start,
                                                                   len(sequences.keys()), f, sum(sequences.values()))
     print '{}\tFound the most common unique sequence to be {}'.format(datetime.datetime.now() - start,
-                                                                                          str(sequences.most_common(1)))
+                                                                      " ".join('{} occurring {} times'.format(k.strip(), str(v))
+                                                                               for k, v in sequences.most_common(1)))
     print '{}\t{} sequences failed to write because the length without the UMI is less than {}'.format(datetime.datetime.now() - start,
                                                                                                        too_short_after_umi_cut,
                                                                                                        args.min_length)
