@@ -10,6 +10,15 @@ from collections import Counter
 start = datetime.datetime.now()
 
 ###########---------------------------------------###########
+#
+# CHANGE LOG
+# 2016-08-22    [1] uniq read WITH umi, then write out without UMI
+#               [2] write out fastq with arbitrary quality score
+#               [3] added UMI to fastq header
+#
+###########---------------------------------------###########
+
+###########---------------------------------------###########
 
 def is_dir(dirname):
     if not os.path.isdir(dirname):
@@ -58,7 +67,7 @@ def init_dir(args):
 ###########---------------------------------------###########
 
 def run_fastqc(f):
-    print '{}\tRunning FastQC on {}'.format(datetime.datetime.now() - start, f)
+    print '{}\tRunning FastQC on {}'.format(datetime.datetime.now() - start, os.path.basename(f))
     fastqc = os.popen('which fastqc').readline().strip()
     if not fastqc:
         fastqc = '/Applications/FastQC.app/Contents/MacOS/fastqc'
@@ -72,7 +81,7 @@ def run_fastqc(f):
 ###########---------------------------------------###########
 
 def cutadapt(f, args):
-    print '{}\tClipping adapter sequence from {}'.format(datetime.datetime.now() - start, f)
+    print '{}\tClipping adapter sequence from {}'.format(datetime.datetime.now() - start, os.path.basename(f))
     cutadapt = os.popen('which cutadapt').readline().strip()
     output = f[:-6] + '.trimmed.fq.gz'
     log = os.path.join(os.path.dirname(args.fq_directory), 'logs', os.path.basename(f).split('.')[0] + '.trim.log')
@@ -98,73 +107,35 @@ def next_block(fastq_file):
 def valid_block(b):
     return b[0] != ''
 
-# def has_been_seen(block, seen_sequences):
-#     return block[1] in seen_sequences
-
-# def output_block(b, umi_length, out):
-#     updated_block = [b[0].split(' ')[0] + ' length:' + str(len(b[1][umi_length:])-1) + '\n',
-#                      b[1][umi_length:],
-#                      b[2],
-#                      b[3][umi_length:]]
-#     out.write(''.join(updated_block))
-
-# def add_sequence(block,seen_sequences):
-#     seen_sequences.add(block[1])
-
-
-# def uniq_fq(f, args):
-#     print '{}\tRemoving duplicate reads from {}'.format(datetime.datetime.now() - start, f)
-#     fastq_file = gzip.open(f)
-#     output = f[:-6] + '.uniq.fq.gz'
-#     seen_sequences = set()
-#     total_seqs, uniq_seqs = 0, 0
-#
-#     block = next_block(fastq_file)
-#     with gzip.open(output, 'wb') as out:
-#         while valid_block(block):
-#             total_seqs += 1
-#             if not has_been_seen(block, seen_sequences):
-#                 if len(block[1][args.umi_length:])-1 >= args.min_length:
-#                     uniq_seqs += 1
-#                     output_block(block, args.umi_length, out)
-#                     add_sequence(block, seen_sequences)
-#             block = next_block(fastq_file)
-#
-#     fastq_file.close()
-#
-#     print '{}\tFound {} unique sequences in {} (total={})'.format(datetime.datetime.now() - start, uniq_seqs, f, total_seqs)
-#
-#     return output
-
-
 def uniq_fq(f, args):
-    print '{}\tRemoving duplicate reads from {}'.format(datetime.datetime.now() - start, f)
+    print '{}\tRemoving duplicate reads from {}'.format(datetime.datetime.now() - start,  os.path.basename(f))
 
     fastq_file = gzip.open(f)
     sequences = Counter()
     block = next_block(fastq_file)
     while valid_block(block):
         seq = block[1]
-        seq_wo_umi = seq[args.umi_length:]
-        if seq_wo_umi in sequences:
-            sequences[seq_wo_umi] += 1
+        if seq in sequences:
+            sequences[seq] += 1
         else:
-            sequences[seq_wo_umi] = 1
+            sequences[seq] = 1
         block = next_block(fastq_file)
     fastq_file.close()
 
-    output = f[:-6] + '.uniq.fasta.gz'
+    output = f[:-6] + '.uniq.fq.gz'
     too_short_after_umi_cut = 0
     with gzip.open(output, 'wb') as out:
         for n, (k, v) in enumerate(sequences.most_common(), start=1):
-            if len(k) - 1 >= args.min_length:
-                out.write('>Sequence_{}_with_{}_occurrences\n{}'.format(str(n), str(v), k))
+            if len(k[args.umi_length:]) - 1 >= args.min_length:
+                qual = 'D'*len(k[args.umi_length:])
+                out.write('>Sequence_{}_{}_with_{}_occurrences\n{}\n+\n{}\n'.format(str(n), k[:args.umi_length], str(v),
+                                                                                 k[args.umi_length:].strip(), qual))
             else:
                 too_short_after_umi_cut += 1
                 continue
 
     print '{}\tFound {} unique sequences in {} (total={})'.format(datetime.datetime.now() - start,
-                                                                  len(sequences.keys()), f, sum(sequences.values()))
+                                                                  len(sequences.keys()),  os.path.basename(f), sum(sequences.values()))
     print '{}\tFound the most common unique sequence to be {}'.format(datetime.datetime.now() - start,
                                                                       " ".join('{} occurring {} times'.format(k.strip(), str(v))
                                                                                for k, v in sequences.most_common(1)))
@@ -183,7 +154,7 @@ def process(args):
         clipped_fq = cutadapt(f, args)
         if args.fastqc: run_fastqc(clipped_fq)
         uniqued_fq = uniq_fq(clipped_fq, args)
-        # if args.fastqc: run_fastqc(uniqued_fq) # cannot run fastqc on fasta file
+        if args.fastqc: run_fastqc(uniqued_fq)
 
     return True
 
