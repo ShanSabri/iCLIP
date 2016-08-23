@@ -127,8 +127,8 @@ def uniq_fq(f, args):
     with gzip.open(output, 'wb') as out:
         for n, (k, v) in enumerate(sequences.most_common(), start=1):
             if len(k[args.umi_length:]) - 1 >= args.min_length:
-                qual = 'D'*len(k[args.umi_length:])
-                out.write('>Sequence_{}_{}_with_{}_occurrences\n{}\n+\n{}\n'.format(str(n), k[:args.umi_length], str(v),
+                qual = 'D'*(len(k[args.umi_length:])-1)
+                out.write('@Sequence_{}_{}_with_{}_occurrences\n{}\n+\n{}\n'.format(str(n), k[:args.umi_length], str(v),
                                                                                  k[args.umi_length:].strip(), qual))
             else:
                 too_short_after_umi_cut += 1
