@@ -147,7 +147,7 @@ if __name__ == '__main__':
     if args.gsnap_args:
         gsnap_args = ' '.join(args.gsnap_args)
     else:
-        gsnap_args = '-t {} -N 1 -A sam --max-mismatches=0 --gunzip -B 5'.format(args.num_threads)
+        gsnap_args = '-t {} -N 1 -A sam --gunzip -B 5'.format(args.num_threads)
 
     if args.clipper_args:
         clipper_args = ' '.join(args.clipper_args)
