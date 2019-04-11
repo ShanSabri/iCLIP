@@ -56,7 +56,7 @@ def parse_user_args():
 ###########---------------------------------------###########
 
 def init_dir(args):
-    print '{}\tCreating necessary directories'.format(datetime.datetime.now()-start)
+    print('{}\tCreating necessary directories'.format(datetime.datetime.now()-start))
     base = os.path.dirname(args.fq_directory)
     if not os.path.exists(os.path.join(base, 'logs')): os.makedirs(os.path.join(base, 'logs'))
     if args.fastqc:
@@ -67,7 +67,7 @@ def init_dir(args):
 ###########---------------------------------------###########
 
 def run_fastqc(f):
-    print '{}\tRunning FastQC on {}'.format(datetime.datetime.now() - start, os.path.basename(f))
+    print('{}\tRunning FastQC on {}'.format(datetime.datetime.now() - start, os.path.basename(f)))
     fastqc = os.popen('which fastqc').readline().strip()
     if not fastqc:
         fastqc = '/Applications/FastQC.app/Contents/MacOS/fastqc'
@@ -81,7 +81,7 @@ def run_fastqc(f):
 ###########---------------------------------------###########
 
 def cutadapt(f, args):
-    print '{}\tClipping adapter sequence from {}'.format(datetime.datetime.now() - start, os.path.basename(f))
+    print('{}\tClipping adapter sequence from {}'.format(datetime.datetime.now() - start, os.path.basename(f)))
     cutadapt = os.popen('which cutadapt').readline().strip()
     output = f[:-6] + '.trimmed.fq.gz'
     log = os.path.join(os.path.dirname(args.fq_directory), 'logs', os.path.basename(f).split('.')[0] + '.trim.log')
@@ -108,7 +108,7 @@ def valid_block(b):
     return b[0] != ''
 
 def uniq_fq(f, args):
-    print '{}\tRemoving duplicate reads from {}'.format(datetime.datetime.now() - start,  os.path.basename(f))
+    print('{}\tRemoving duplicate reads from {}'.format(datetime.datetime.now() - start,  os.path.basename(f)))
 
     fastq_file = gzip.open(f)
     sequences = Counter()
@@ -134,14 +134,14 @@ def uniq_fq(f, args):
                 too_short_after_umi_cut += 1
                 continue
 
-    print '{}\tFound {} unique sequences in {} (total={})'.format(datetime.datetime.now() - start,
-                                                                  len(sequences.keys()),  os.path.basename(f), sum(sequences.values()))
-    print '{}\tFound the most common unique sequence to be {}'.format(datetime.datetime.now() - start,
-                                                                      " ".join('{} occurring {} times'.format(k.strip(), str(v))
-                                                                               for k, v in sequences.most_common(1)))
-    print '{}\t{} sequences failed to write because the length without the UMI is less than {}'.format(datetime.datetime.now() - start,
-                                                                                                       too_short_after_umi_cut,
-                                                                                                       args.min_length)
+    print('{}\tFound {} unique sequences in {} (total={})'.format(datetime.datetime.now() - start,
+                                                                      len(sequences.keys()),  os.path.basename(f), sum(sequences.values())))
+    print('{}\tFound the most common unique sequence to be {}'.format(datetime.datetime.now() - start,
+                                                                          " ".join('{} occurring {} times'.format(k.strip(), str(v))
+                                                                                   for k, v in sequences.most_common(1))))
+    print('{}\t{} sequences failed to write because the length without the UMI is less than {}'.format(datetime.datetime.now() - start,
+                                                                                                           too_short_after_umi_cut,
+                                                                                                           args.min_length))
     return output
 
 ###########---------------------------------------###########
@@ -161,7 +161,7 @@ def process(args):
 ###########---------------------------------------###########
 
 def clean_up(args):
-    print '{}\tCleaning up!'.format(datetime.datetime.now() - start)
+    print('{}\tCleaning up!'.format(datetime.datetime.now() - start))
     intermediate_fq = [os.path.join(args.fq_directory, f) for f in os.listdir(args.fq_directory) if not '.uniq.' in f]
     fastqc_dir = os.path.join(os.path.dirname(args.fq_directory), 'fastqc')
     fastqc_zip = [os.path.join(fastqc_dir, f) for f in os.listdir(fastqc_dir) if f.endswith('.zip')]
@@ -173,8 +173,8 @@ def clean_up(args):
 
 if __name__ == '__main__':
     args = parse_user_args()
-    print '{}\tStart!'.format(datetime.datetime.now())
+    print('{}\tStart!'.format(datetime.datetime.now()))
     init_dir(args)
     process(args)
     if args.clean_up: clean_up(args)
-    print '{}\tFinish!'.format(datetime.datetime.now())
+    print('{}\tFinish!'.format(datetime.datetime.now()))
